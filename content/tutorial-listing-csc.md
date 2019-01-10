@@ -1,602 +1,383 @@
-# Listing CSC as an Exchange
-
-This document describes the steps that an exchange needs to take to list CSC. For details about other aspects of `casinocoind` and the CSC Ledger, see the  [CasinoCoin Developer Center](https://casinocoin.org/build).
-
-## Alpha Exchange
-
-For illustrative purposes, this document uses a fictitious business called _Alpha Exchange_ to explain the high-level steps required to list CSC. For the purposes of this document, Alpha Exchange:
-
-* Currently specializes in listing BTC/USD
-
-* Wants to add BTC/CSC and CSC/USD trading pairs
-
-* Maintains balances for all of its customers
-
-* Maintains balances for each of its supported currencies
-
-### User Benefits
-
-Alpha Exchange wants to list BTC/CSC and CSC/USD trading pairs partially because listing these pairs benefits its users. Specifically, this support wants to enable its users to:
-
-* Deposit CSC _to_ Alpha Exchange _from_ the CSC Ledger
-
-* Withdraw CSC _from_ Alpha Exchange _to_ the CSC Ledger
-
-* Trade CSC with other currencies, such as BTC, USD, among others
-
-## Prerequisites for Supporting CSC
-
-To support CSC, Alpha Exchange must:
-
-* Create and maintain new [accounts](#accounts)
-
-* Create and maintain [balance sheets](#balance-sheets)
-
-See also:
-
-* [Gateway Compliance](tutorial-gateway-guide.html#gateway-compliance) — Gateways and exchanges are different, but exchanges should also ensure that they are complying with local regulations and reporting to the appropriate agencies.
-
-* [Requirements for Sending to CSC Ledger](tutorial-gateway-guide.html#requirements-for-sending-to-csc-ledger)
-
-* [Requirements for Receiving from CSC Ledger](tutorial-gateway-guide.html#requirements-for-receiving-from-csc-ledger)
-
-* [Gateway Precautions](tutorial-gateway-guide.html#precautions)
-
-### Partial Payments
-
-Before integrating, exchanges should be aware of the [partial payments](reference-transaction-format.html#partial-payments) feature. This feature allows CSC Ledger users to send successful payments that reduce the amount received instead of increasing the `SendMax`. This feature can be useful for [returning payments](tutorial-gateway-guide.html#bouncing-payments) without incurring additional cost as the sender.
-
-#### Partial Payments Warning
-
-When the [tfPartialPayment flag](reference-transaction-format.html#payment-flags) is enabled, the `Amount` field **_is not guaranteed to be the amount received_**. The `delivered_amount` field of a payment's metadata indicates the amount of currency actually received by the destination account. When receiving a payment, use `delivered_amount` instead of the Amount field to determine how much your account received instead.
-
-**Warning:** Be aware that malicious actors could exploit this. For more information, see [Partial Payments](concept-partial-payments.html).
-
-### Accounts
-
-CSC is held in _accounts_ (also referred to as _wallets_ or _addresses_  ) on the CSC Ledger. Accounts on the CSC Ledger are different than accounts on other blockchain ledgers, such as Bitcoin, where accounts incur little to no overhead. In the CSC Ledger, accounts can [never be deleted](concept-accounts.html#permanence-of-accounts), and each account must hold a separate [reserve of CSC](concept-reserves.html) that cannot be sent to others. For these reasons, CasinoCoin recommends that institutions not create excessive or needless accounts.
-
-<!-- STYLE_OVERRIDE: hot wallet, warm wallet, cold wallet, wallet -->
-
-To follow CasinoCoin's recommended best practices, Alpha Exchange should create at least two new accounts on the CSC Ledger. To minimize the risks associated with a compromised secret key, CasinoCoin recommends creating [_cold_, _hot_, and _warm_ accounts](https://casinocoin.org/build/issuing-operational-addresses/) (these are sometimes referred to, respectively, as cold, hot, and warm wallets). The hot/warm/cold model is intended to balance security and convenience. Exchanges listing CSC should create the following accounts:
-
-* A [_cold wallet_](concept-issuing-and-operational-addresses.html#issuing-address) to securely hold the majority of CSC and customers' funds. For exchanges, this is also the address to which its users send [deposits](#deposit-csc-into-exchange).   To provide optimal security, this account's secret key should be offline.
-
-    If a malicious actor compromises an exchange's cold wallet, the possible consequences are:
-
-    * The malicious actor gets full access to all CSC in the cold wallet.
-
-    * If the master key is compromised, the malicious actor can irrevocably take control of the cold wallet forever (by disabling the master key and setting a new regular key or signer list). This would also give the malicious actor control over all future CSC received by the cold wallet.
-
-        * If this happens, the exchange has to make a new cold wallet address and tell its customers the new address.
-
-    * If the regular key or signer list are comromised, the exchange can regain control of the cold wallet. However, some of a malicious actor's actions cannot easily be undone: <!-- STYLE_OVERRIDE: easily -->
-
-        * The malicious actor could issue currency in the CSC Ledger by using the cold wallet, but that currency should not be valued by anyone (unless the exchange explicitly stated it was also a gateway).
-
-        * If a malicious actor sets the asfRequireAuth flag for the account, that cannot be unset, although this only relates to issuing currency and should not affect an exchange that is not also a gateway. Any other settings a malicious actor sets or unsets with a master key can be reverted.
-
-* One or more [_hot wallets_](concept-issuing-and-operational-addresses.html#operational-addresses) to conduct the day-to-day business of managing customers' CSC withdrawals and deposits. For example, with a hot wallet, exchanges can securely support these types of automated CSC transfers. Hot wallets need to be online to service instant withdrawal requests.
-
-    For more information about the possible consequences of a compromised hot wallet, see [Operational Account Compromise](concept-issuing-and-operational-addresses.html#operational-address-compromise).
-
-* Optionally, one or more warm wallets to provide an additional layer of security between the cold and hot wallets. Unlike a hot wallet, the secret key of a warm wallet does not need to be online. Additionally, you can distribute the secret keys for the warm wallet to several different people and implement [multisigning](tutorial-multisign.html) to increase security.
-
-    For more information about the possible consequences of a compromised warm wallet, see [Standby Account Compromise](concept-issuing-and-operational-addresses.html#standby-address-compromise).
-
-
-See also:
-
-* ["Suggested Business Practices" in the _Gateway Guide_](tutorial-gateway-guide.html#suggested-business-practices)
-
-* [Issuing and Operational Addresses](concept-issuing-and-operational-addresses.html)
-
-* [Creating Accounts](reference-transaction-format.html#creating-accounts)
-
-* [Reserves](concept-reserves.html)
-
-### Balance Sheets
-
-To custody its ccustomers' CSC, Alpha Exchange must track each customer's CSC balance and its own holdings. To do this, Alpha Exchange must create and maintain an additional balance sheet or accounting system. The following table illustrates what this balance sheet might look like.
-
-The new CSC Ledger accounts (_Alpha Hot_, _Alpha Warm_, _Alpha Cold_) are in the *User* column of the *CSC Balances on CSC Ledger* table.
-
-The *Alpha Exchange CSC Balances* table represents new, additional balance sheet. Alpha Exchange’s software manages their users’ balances of CSC on this accounting system.
-
-
-<table>
-  <tr>
-    <td><b><i>CSC Balances
-on CSC Ledger</i></b></td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange
-CSC Balances</i></b></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-    <td></td>
-    <td><b>Acct #</b></td>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-  </tr>
-  <tr>
-    <td>Dave</td>
-    <td>25,000</td>
-    <td></td>
-    <td>123</td>
-    <td>Alice</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Edward</td>
-    <td>45,000</td>
-    <td></td>
-    <td>456</td>
-    <td>Bob</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Charlie</td>
-    <td>50,000</td>
-    <td></td>
-    <td>789</td>
-    <td>Charlie</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td><i>Alpha Hot</i></td>
-    <td>0</td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><i>Alpha Warm</i></td>
-    <td>0</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><i>Alpha Cold</i></td>
-    <td>0</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>
-
-#### CSC Amounts
-
-Amounts of CSC are represented on the CSC Ledger as an unsigned integer count of _drops_, where one CSC is 100,000,000 drops. CasinoCoin recommends that software store CSC balances as integer amounts of drops, and perform integer arithmetic on these values. However, user interfaces should present balances in units of CSC.
-
-One drop (.00000001 CSC) cannot be further subdivided. Keep this in mind when calculating and displaying FX rates between CSC and other assets.
-
-For more information, see [Specifying Currency Amounts](reference-casinocoind.html#specifying-currency-amounts).
-
-#### On-Ledger and Off-Ledger
-
-With exchanges like _Alpha Exchange_, CSC can be "on-ledger" or "off-ledger":
-
-* **On-Ledger CSC**: CSC that can be queried through the public CSC Ledger by specifying the public [address](concept-accounts.html#addresses) of the CSC holder. The counterparty to these balances is the CSC Ledger. For more information, see [Currencies](reference-casinocoind.html#currencies).
-
-* **Off-Ledger CSC**: CSC that is held by the accounting system of an exchange and can be queried through the exchange interface. Off-ledger CSC balances are credit-based. The counterparty is the exchange holding the CSC.
-
-    Off-ledger CSC balances are traded between the participants of an exchange. To support these trades, the exchange must hold a balance of _on-ledger CSC_ equal to the aggregate amount of _off-ledger CSC_ that it makes available for trade.
-
-
-## Flow of Funds
-
-The remaining sections describe how funds flow through the accounts managed by Alpha Exchange as its users begin to deposit, trade, and redeem CSC balances. To illustrate the flow of funds, this document uses the tables introduced in the ["Balance Sheets" section](#balance-sheets).
-
-There are four main steps involved in an exchange's typical flow of funds:
-
-1. [Deposit CSC into Exchange](#deposit-csc-into-exchange)
-
-2. [Rebalance CSC Holdings](#rebalance-csc-holdings)
-
-3. [Withdraw CSC from Exchange](#withdraw-csc-from-exchange)
-
-4. [Trade CSC on the Exchange](#trade-csc-on-the-exchange)
-
-
-This list does not include the [prerequisites](#prerequisites-for-supporting-csc) required of an exchange.
-
-At this point, _Alpha Exchange_ has created [hot, warm, and cold wallets](#accounts) on the CSC Ledger and added them to its balance sheet, but has not accepted any deposits from its users.
-
-
-<table>
-  <tr>
-    <td><b><i>CSC Balances
-on CSC Ledger</i></b></td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange
-CSC Balances</i></b></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-    <td></td>
-    <td><b>Acct #</b></td>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-  </tr>
-  <tr>
-    <td>Dave</td>
-    <td>25,000</td>
-    <td></td>
-    <td>123</td>
-    <td>Alice</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Edward</td>
-    <td>45,000</td>
-    <td></td>
-    <td>456</td>
-    <td>Bob</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Charlie</td>
-    <td>50,000</td>
-    <td></td>
-    <td>789</td>
-    <td>Charlie</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td><i>Alpha Hot</i></td>
-    <td>0</td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><i>Alpha Warm</i></td>
-    <td>0</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><i>Alpha Cold</i></td>
-    <td>0</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>
-
-
-### Deposit CSC into Exchange
-
-To track [off-ledger CSC balances](#on-ledger-and-off-ledger), exchanges need to create new [balance sheets](#balance-sheets) (or similar accounting systems). The following table illustrates the balance changes that take place on Alpha Exchange's new balance sheet as users begin to deposit CSC.
-
-A user named Charlie wants to deposit 50,000 CSC to Alpha Exchange. Doing this involves the following steps:
-
-1. Charlie submits a payment of 50,000  CSC (by using [CasinocoinAPI](reference-casinocoinapi.html) or similar software) to Alpha Exchange's [cold wallet](#accounts).
-
-    a. Charlie adds an identifier (in this case, `789`) to the payment to associate it with his account at Alpha Exchange. This is called a [_destination tag_](tutorial-gateway-guide.html#source-and-destination-tags). (To use this, Alpha Exchange should have set the asfRequireDest flag on all of its accounts to require all incoming payments to have a destination tag like Charlie's. For more information, see [AccountSet Flags](reference-transaction-format.html#accountset-flags)).
-
-2. The software at Alpha Exchange detects the incoming payment, and recognizes `789` as the destination tag for Charlie’s account.
-
-3. When it detects the incoming payment, Alpha Exchange's software updates its balance sheet to indicate that the 50,000 CSC it received is controlled by Charlie.
-
-    Charlie can now use up to 50,000 CSC on the exchange. For example, he can create offers to trade CSC with BTC or any of the other currencies Alpha Exchange supports.
-
-<table>
-  <tr>
-    <td><b><i>CSC Balances
-on CSC Ledger</i></b></td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange
-CSC Balances</i></b></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-    <td></td>
-    <td><b>Acct #</b></td>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-  </tr>
-  <tr>
-    <td>Dave</td>
-    <td>25,000</td>
-    <td></td>
-    <td>123</td>
-    <td>Alice</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Edward</td>
-    <td>45,000</td>
-    <td></td>
-    <td>456</td>
-    <td>Bob</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>Charlie</td>
-    <td><s>100,000</s>
-<br>50,000</td>
-    <td></td>
-    <td>789</td>
-    <td>Charlie</td>
-    <td><s>0</s>
-<br>50,000</td>
-  </tr>
-  <tr>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Alpha Hot</td>
-    <td>0</td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Alpha Warm</td>
-    <td>0</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Alpha Cold</td>
-    <td><s>0</s>
-<br>50,000</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>
-
-
-### Trade CSC on the Exchange
-
-Alpha Exchange users (like Charlie) can trade credit-based balances on Alpha Exchange. Alpha Exchange should keep track of user balances on its new balance sheet as these trades are made. These trades are _off-ledger_ and independent from the CSC Ledger, so the balance changes are not recorded on the CSC Ledger.
-
-Customers who hold CSC in their own CSC Ledger accounts can also use the distributed exchange built into the CSC Ledger to trade currencies issued by gateways. For more information about trading _on_ the CSC Ledger, see [Lifecycle of an Offer](reference-transaction-format.html#lifecycle-of-an-offer).
-
-
-### Rebalance CSC Holdings
-
-Exchanges can adjust the balances between their hot and cold wallets at any time. Each balance adjustment consumes a [transaction cost](concept-transaction-cost.html), but does not otherwise affect the aggregate balance of all the accounts. The aggregate, on-ledger balance should always exceed the total balance available for trade on the exchange. (The excess should be enough to cover the CSC Ledger's transaction costs.)
-
-The following table demonstrates a balance adjustment of 80,000 CSC (via a [_payment_](reference-transaction-format.html#payment) on the CSC Ledger) between Alpha Exchange's cold wallet and its hot wallet, where the cold wallet was debited and the hot wallet was credited. If the payment were reversed (debiting the hot wallet and crediting the cold wallet), the hot wallet balance would decrease. Balance adjustments like these allow an exchange to limit the risks associated with holding CSC in online hot wallets.
-
-
-<table>
-  <tr>
-    <td><b><i>Alpha Exchange CSC
-Off-Ledger Balances</i></b></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange CSC On-Ledger Balances</i></b></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><b>Acct #</b></td>
-    <td><b>User</b></td>
-    <td><b>Balance</b></td>
-    <td></td>
-    <td><b>CSC Ledger Account</b></td>
-    <td><b>Balance</b></td>
-  </tr>
-  <tr>
-    <td>123</td>
-    <td>Alice</td>
-    <td>80,000</td>
-    <td></td>
-    <td>Hot</td>
-    <td><s>0</s>
-<br>80,000</td>
-  </tr>
-  <tr>
-    <td>456</td>
-    <td>Bob</td>
-    <td>50,000</td>
-    <td></td>
-    <td>Warm</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>….</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td>….</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>789</td>
-    <td>Charlie</td>
-    <td>50,000</td>
-    <td></td>
-    <td>Cold</td>
-    <td><s>180,000</s>
-<br>100,000</td>
-  </tr>
-  <tr>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-  </tr>
-</table>
-
-
-### Withdraw CSC from Exchange
-
-Withdrawals allow an exchange's users to move CSC from the exchange's off-ledger balance sheet to an account on the CSC Ledger.
-
-In this example, Charlie withdraws 25,000 CSC from Alpha Exchange. This involves the following steps:
-
-1. Charlie initiates the process on Alpha Exchange’s website. He provides instructions to transfer 25,000 CSC to a specific account on the CSC Ledger (named "Charlie CSC Ledger" in the following table).
-
-2. In response to Charlie’s instructions, Alpha Exchange does the following:
-
-    a. Debits the amount (25,000 CSC) from Charlie’s account on its off-ledger balance sheet
-
-    b. Submits a payment on the CSC Ledger for the same amount (25,000 CSC), from Alpha Exchange's hot wallet to Charlie’s CSC Ledger account
-
-
-<table>
-  <tr>
-    <td><b><i>CSC Ledger On-Ledger CSC Balances</td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange CSC
-Off-Ledger Balances</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td><b><i>Alpha Exchange CSC On-Ledger Balances</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td><b>User</td>
-    <td><b>Balance</td>
-    <td></td>
-    <td><b>Acct #</td>
-    <td><b>User</td>
-    <td><b>Balance</td>
-    <td></td>
-    <td><b>CSC Ledger Account</td>
-    <td><b>Balance</td>
-  </tr>
-  <tr>
-    <td>Dave</td>
-    <td>25,000</td>
-    <td></td>
-    <td>123</td>
-    <td>Alice</td>
-    <td>80,000</td>
-    <td></td>
-    <td>Hot</td>
-    <td><s>80,000</s>
-<br>55,000</td>
-  </tr>
-  <tr>
-    <td>Edward</td>
-    <td>45,000</td>
-    <td></td>
-    <td>456</td>
-    <td>Bob</td>
-    <td>50,000</td>
-    <td></td>
-    <td>Warm</td>
-    <td>0</td>
-  </tr>
-  <tr>
-    <td>….</td>
-    <td></td>
-    <td></td>
-    <td>….</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td>….</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Charlie CSC Ledger</td>
-    <td><s>50,000</s>
-<br>75,000</td>
-    <td></td>
-    <td>789</td>
-    <td>Charlie</td>
-    <td><s>50,000</s>
-<br>25,000</td>
-    <td></td>
-    <td>Cold</td>
-    <td>100,000</td>
-  </tr>
-  <tr>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td>...</td>
-    <td></td>
-  </tr>
-</table>
-
-
-{% include 'snippets/tx-type-links.md' %}
+# Listing CSC on an Exchange
+## Install and configure casinocoind
+
+Ubuntu 16.04 is recommended and can be downloaded from: [https://www.ubuntu.com/download/server](https://www.ubuntu.com/download/server)
+
+### Secure WebSockets
+Secure WebSockets should be used for the production wallet server. This will require a SSL certificate. In this example we are using Let's Encrypt, but other SSL certificates will also work. They should be placed in
+```
+ssl_key = /etc/casinocoind/ssl/privkey.pem
+ssl_cert = /etc/casinocoind/ssl/cert.pem
+ssl_chain = /etc/casinocoind/ssl/fullchain.pem
+```
+The location can be changed, but changes need to be reflected in the config file.
+
+
+### Important Information
+- Please use DestinationTag for all user deposits
+- The daemon is _NOT_ a wallet<br>
+- Configuration takes place in `/etc/casinocoind/casinocoind.cfg`<br>
+- Servers should be secured by setting strict firewall rules and allow SSH key-based authentication only<br>
+
+
+### Daemon Setup
+Commands need to be executed via the command line and can be used to create a script.
+
+```bash
+sudo apt-get update -y
+sudo apt-get upgrade -y
+sudo apt-get dist-upgrade -y
+sudo  timedatectl set-timezone Etc/UTC
+sleep 10
+sudo apt-get install ufw -y
+sudo ufw allow ssh
+sudo ufw allow to any port 17771
+sudo ufw enable
+sudo ufw status
+sleep 10
+sudo apt-get install htop -y
+mkdir $HOME/src
+cd $HOME/src
+sudo apt install python-software-properties curl git scons ctags cmake pkg-config protobuf-compiler libprotobuf-dev libssl-dev python-software-properties libboost-all-dev -y
+sudo git clone https://github.com/casinocoin/casinocoind.git
+cd casinocoind
+sudo scons
+sudo strip build/casinocoind
+sudo cp build/casinocoind /usr/bin
+sudo mkdir /var/log/casinocoind
+sudo mkdir /etc/casinocoind
+sudo mkdir -p /var/lib/casinocoind/db
+sudo adduser casinocoin
+sudo groupadd casinocoin
+sudo chown ubuntu:casinocoin /var/log/casinocoind
+sudo chown -R ubuntu:casinocoin /var/lib/casinocoind
+sudo chown ubuntu:casinocoin /var/log/casinocoind
+sudo cp $HOME/src/casinocoind/doc/casinocoind-example.cfg /etc/casinocoind/casinocoind.cfg
+sudo cp $HOME/src/casinocoind/doc/validators-example.txt /etc/casinocoind/validators.txt
+sudo cp $HOME/src/casinocoind/doc/casinocoind-example.service /etc/systemd/system/casinocoind.service
+sleep 10
+sudo usermod -aG casinocoin ubuntu
+sudo usermod -aG casinocoin casinocoin
+sudo chown -R ubuntu:casinocoin /var/lib/casinocoind/db
+sudo chmod -R 774 /var/lib/casinocoind/db
+sudo systemctl enable casinocoind.service
+```
+
+## CasinoCoin Commands Usage
+
+### Overview
+CasinoCoin commands can be executed via the commandline daemon, json-rpc or a websocket connection.
+
+**Note:** This document uses examples via the commandline.
+
+
+### Important Information
+* Always use DestinationTag when sending coins from a user to an exchange.
+    * The public address (account_id) will always starts with a lowercase '`c`' instead of the uppercase '`C`' as used by classic casinocoin.
+    * The daemon is _NOT_ a wallet! So an exchange must safeguard its own private keys per account!
+    * The exchange creates a single deposit address for all users
+    * The exchange generates a unique DestinationTag for every user. This must be a 32-bit unsigned integer (so between 1 and 2,147,483,647).
+    * The user must add the DestinationTag to every deposit from his wallet.
+    * The exchange maps all incomming deposits to a user account using the DestinationTag on the transaction
+
+
+## Most used commands for exchanges
+* [getbalance](#getbalance)
+* [getnewaddress](#getnewaddress)
+* [validateaddress](#validateaddress)
+* [sendtoaddress](#sendtoaddress)
+* [settxfee](#settxfee)
+* [gettransaction](#gettransaction)
+
+
+<br/>
+<br/>
+
+### getbalance
+
+#### Command
+<!-- MULTICODE_BLOCK_START -->
+*Commandline*
+```bash
+#Syntax: account_info account [ledger_index|ledger_hash] [strict]
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg account_info c9Yc5KuDTbS5TrnrzLVR1eXTgy4KuqG23c validated
+```
+<!-- MULTICODE_BLOCK_END -->
+
+[Try it! >](casinocoin-api-tool.html#account_info)
+
+#### Output
+```json
+Loading: "/etc/casinocoind/casinocoind.cfg"
+2017-Nov-10 15:40:04 HTTPClient:WRN setup_ServerHandlerparse_Portssetup_Clientsetup_Overlay
+2017-Nov-10 15:40:04 HTTPClient:NFO Connecting to 127.0.0.1:5005
+
+{
+    "id" : 1,
+    "result" : { 
+        "account_data" : {
+            "Account" : "c9Yc5KuDTbS5TrnrzLVR1eXTgy4KuqG23c", 
+            "Balance" : "29500000000",
+            "Flags" : 0,
+            "LedgerEntryType" : "AccountRoot",
+            "OwnerCount" : 0,
+            "PreviousTxnID" : "55805B351F9DA423BC91433F65CB072594D26CD7C14C25FFEF729806BFB9E927", 
+            "PreviousTxnLgrSeq" : 1940,
+            "Sequence" : 1,
+            "index" : "E210E2A7707A7BB7D6FD4781E1881F32CC1312EE9EE9C95A17C847364D05BA9D"
+        },
+        "ledger_hash" : "0A99A78A0E12E7BE6029D03AA07426B7119DB43EF6FD11A7A74BD424B3EF040B", 
+        "ledger_index" : 3427,
+        "status" : "success",
+        "validated" : true
+    } 
+}
+```
+
+**Tip:** 
+    - `Balance` is in satoshi<br/>
+    - `PreviousTxnID` is the last TX from the account<br/>
+    - `PreviousTxnLgrSeq` is the ledger in which the last TX was included<br/>
+    - `Sequence` is the amount of transactions from the account (so only outgoing!)<br/>
+
+
+### getnewaddress
+
+#### Command
+<!-- MULTICODE_BLOCK_START -->
+*Commandline*
+```bash
+#Syntax: wallet_propose [passphrase]
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg wallet_propose
+```
+<!-- MULTICODE_BLOCK_END -->
+
+#### Output
+```json
+Loading: "/etc/casinocoind/casinocoind.cfg"
+2017-Nov-10 15:51:08 HTTPClient:WRN setup_ServerHandlerparse_Portssetup_Clientsetup_Overlay 2017-Nov-10 15:51:08 HTTPClient:NFO Connecting to 127.0.0.1:5005
+
+{
+    "id" : 1,
+    "result" : {
+        "account_id" : "c4jZZYa6JY2mzvPn7fpHDBmXNUYmgB6GV8",
+        "key_type" : "secp256k1",
+        "master_key" : "SLY SEEN ABUT NEWS MARC AWRY FUSS TAN HEWN ROCK WIND RIME", 
+        "master_seed" : "shvPNL4dkk95bgaQSja6mrNqARdZB",
+        "master_seed_hex" : "9FBF8F685EEAC787A074EBE11F19FB3C",
+        "public_key" : "aB4MjSe4H1cwafsuXPDXs3oLqJKH6PBwiRBrcVgqW4xgAGFicPjP",
+        "public_key_hex" : "0234C02110A6B2703C471F318DBC6108F43ABD9C2B40ED9FC9B3A6E780629C64DB", 
+        "status" : "success"
+    } 
+}
+```
+
+**Tip:** 
+    - `account_id` is the public address which always starts with a lowercase '`c`' instead of the uppercase '`C`' for the classic casinocoin<br/>
+    - `master_seed is your secret necesarry to sign a transaction<br/>
+    - running `wallet_propose` with the `master_seed` as input will result in the same output<br/>
+
+
+### validateaddress
+
+#### Command
+<!-- MULTICODE_BLOCK_START -->
+*Commandline*
+```bash
+#Syntax: account_info account [ledger_index|ledger_hash] [strict]
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg account_info c4jZZYa6JY2mzvPn7fpHDBmXNUYmgB6GV8 validated
+```
+<!-- MULTICODE_BLOCK_END -->
+
+[Try it! >](casinocoin-api-tool.html#account_info)
+
+#### Output
+```json
+Loading: "/etc/casinocoind/casinocoind.cfg"
+2017-Nov-10 16:16:11 HTTPClient:WRN setup_ServerHandlerparse_Portssetup_Clientsetup_Overlay 2017-Nov-10 16:16:11 HTTPClient:NFO Connecting to 127.0.0.1:5005
+
+{
+    "id" : 1, 
+    "result" : {
+        "account" : "c4jZZYa6JY2mzvPn7fpHDBmXNUYmgB6GV8", 
+        "error" : "actNotFound",
+        "error_code" : 18,
+        "error_message" : "Account not found.",
+        "ledger_hash" : "36C0D7D7D6CBFAE98605D2D35E299B6F048874F7F9847AF23FAE26DDFF93E42F", 
+        "ledger_index" : 3434,
+        "request" : {
+            "account" : "c4jZZYa6JY2mzvPn7fpHDBmXNUYmgB6GV8", 
+            "command" : "account_info",
+            "ledger_index" : "validated"
+        },
+        "status" : "error", 
+        "validated" : true
+    }
+}
+```
+
+**Tip:** 
+    - this command does not check the actual correctness of the address. it only shows if an account has been activated on the ledger by sending at least the minimal amount of coins to it. If not it shows `"error" : "actNotFound"`<br>
+    - check the minimal account and fee requirements with the [`server_state`](reference-casinocoind.html#server-state) command -> `"reserve_base" : 1000000000` -> minimal amount of satoshi to activate an account<br>
+    - if an exact check is needed it can be done by using a base58 check like for bitcoin but replacing it with the casinocoin alphabet<br>
+
+
+### sendtoaddress
+
+#### Command
+<!-- MULTICODE_BLOCK_START -->
+*Commandline*
+```bash
+#Syntax: sign secret tx_json [offline]
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg sign s████████████████████████ '{"TransactionType": "Payment", "Account": "cQsHT9fnGyAWzQKa7urb8FB6B6x9RaeTp2", "Destination": "c9Yc5KuDTbS5TrnrzLVR1eXTgy4KuqG23c", "Amount": "400000000", "Sequence": 1, "Fee": "100000", "DestinationTag": 12345}' offline
+```
+<!-- MULTICODE_BLOCK_END -->
+
+[Try it! >](casinocoin-api-tool.html#sign)
+
+The following needs to be executed before the current command:
+```bash
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg account_info c4jZZYa6JY2mzvPn7fpHDBmXNUYmgB6GV8 validated
+```
+This results in the above output. You must then take `"Sequence": 8` and replace the current value with the actual new value so replace ..... `"Amount": "400000000", "Sequence": 1` with ...... `"Amount": "400000000", "Sequence": 8` after that the command will show `"Sequence": 9` and so on ...
+
+**Tip:**
+    - `s████████████████████████` is the master_seed from the wallet_propose command<br/>
+    - all amounts are in satoshis<br/>
+    - the resulting tx_blob contains the binary representation of the fully-qualified, signed transaction, as hex - Next step is submitting the tx_blob:<br/>
+    ```casinocoind --conf=/etc/casinocoind/casinocoind.cfg submit 1200002280000000240000000361D4838D7EA4C68000000000000000000555344****************```
+
+
+### settxfee
+
+**Tip:** This command does not exist at server level, if not added to a transaction it will use the blockchains default fee as returned with the [`server_state`](reference-casinocoind.html#server-state) command.
+
+
+### gettransaction
+The `tx` method retrieves information on a single transaction.
+
+#### Command
+<!-- MULTICODE_BLOCK_START -->
+*Commandline*
+```bash
+#Syntax: tx transaction [binary]
+casinocoind --conf=/etc/casinocoind/casinocoind.cfg tx 55805B351F9DA423BC91433F65CB072594D26CD7C14C25FFEF729806BFB9E927
+```
+<!-- MULTICODE_BLOCK_END -->
+
+[Try it! >](casinocoin-api-tool.html#tx)
+
+
+#### Output
+```json
+Loading: "/etc/casinocoind/casinocoind.cfg"
+2017-Nov-10 16:27:43 HTTPClient:WRN setup_ServerHandlerparse_Portssetup_Clientsetup_Overlay 2017-Nov-10 16:27:43 HTTPClient:NFO Connecting to 127.0.0.1:5005
+
+{
+    "id": 1,
+    "result": {
+        "Account": "cQsHT9fnGyAWzQKa7urb8FB6B6x9RaeTp2",
+        "Amount": "400000000",
+        "Destination": "c9Yc5KuDTbS5TrnrzLVR1eXTgy4KuqG23c",
+        "Fee": "100000",
+        "Flags": 2147483648,
+        "LastLedgerSequence": 1954,
+        "Memos": [
+            {
+                "Memo": {
+                    "MemoData": "746573742073656E64",
+                    "MemoFormat": "706C61696E2F74657874"
+                }
+            }
+        ],
+        "Sequence": 1,
+        "SigningPubKey": "02B358A1A875D7E983D561F25AD5D016B1C67A7F82701EE4D645A4AE79190C4606",
+        "TransactionType": "Payment",
+        "TxnSignature": "30440220345B82D6DB5C1D617C3D1E4965148270539CCDCBD4365F7EC928654F4784079202206FA5FB269EDA0F43CB E755305651F90FAC04530CEB74884DC428BFED764AAEF0",
+        "date": 563197340,
+        "hash": "55805B351F9DA423BC91433F65CB072594D26CD7C14C25FFEF729806BFB9E927",
+        "inLedger": 1940,
+        "ledger_index": 1940,
+        "meta": {
+            "AffectedNodes": [
+                {
+                    "ModifiedNode": {
+                        "FinalFields": {
+                            "Account": "c9Yc5KuDTbS5TrnrzLVR1eXTgy4KuqG23c",
+                            "Balance": "29500000000",
+                            "Flags": 0,
+                            "OwnerCount": 0,
+                            "Sequence": 1
+                        },
+                        "LedgerEntryType": "AccountRoot",
+                        "LedgerIndex": "E210E2A7707A7BB7D6FD4781E1881F32CC1312EE9EE9C95A17C847364D05BA9D",
+                        "PreviousFields": {
+                            "Balance": "29100000000"
+                        },
+                        "PreviousTxnID": "FF769D86885BD626AC2A9F1D64C93FBF95587848F0291189B662684C176F98CF",
+                        "PreviousTxnLgrSeq": 1932
+                    }
+                },
+                {
+                    "ModifiedNode": {
+                        "FinalFields": {
+                            "Account": "cQsHT9fnGyAWzQKa7urb8FB6B6x9RaeTp2",
+                            "Balance": "1037899900000",
+                            "Flags": 0,
+                            "OwnerCount": 0,
+                            "Sequence": 2
+                        },
+                        "LedgerEntryType": "AccountRoot",
+                        "LedgerIndex": "E5A3C9E8B1A6594C55520A46AB904F4303ABE4D29F862C1781BE12043676E7EF",
+                        "PreviousFields": {
+                            "Balance": "1038300000000",
+                            "Sequence": 1
+                        },
+                        "PreviousTxnID": "09A236E1622DB1FC1725CC8B6F41D4E24ABE8B42E1ECDD17C9C2FD38596F1E90",
+                        "PreviousTxnLgrSeq": 1407
+                    }
+                }
+            ],
+            "TransactionIndex": 0,
+            "TransactionResult": "tesSUCCESS",
+            "delivered_amount": "400000000"
+        },
+        "status": "success",
+        "validated": true
+    }
+}
+```
+
+**Tip:**
+    - command returns full transaction details for the tx from `Account` to `Destination` for `Amount` and `Fee`<br/>
+    - the `TransactionResult` only indicates if a transaction was successfully transmitted to the blockchain<br/>
+    - when `"validated" : true` -> the transaction is final in the ledger -> so there is no need for waiting for extra confirmations as there are no changes possible anymore in the past (no Orphans exist on the new blockchain!)<br/>
+    - please note that the date format differs from the default unix timestamp. It's an unsigned integer with the number of seconds since the CasinoCoin epoch: `January 1st, 2000 (00:00 UTC)`<br/>
+
+#### Helpers
+These are the JavaScript helper methods we use to do the conversions: 
+```javascript
+static casinocoinToUnixTimestamp(rpepoch: number): number {
+    return (rpepoch + 0x386D4380) * 1000 
+}
+```
+```javascript
+static unixToCasinocoinTimestamp(timestamp: number): number { 
+    return Math.round(timestamp / 1000) - 0x386D4380
+}
+```
+```javascript
+static casinocoinTimeToISO8601(casinocoinTime: number): string {
+    return new Date(this.casinocoinToUnixTimestamp(casinocoinTime)).toISOString()
+}
+```
+```javascript
+static iso8601ToCasinocoinTime(iso8601: string): number {
+    return this.unixToCasinocoinTimestamp(Date.parse(iso8601)) 
+}
+```
+```javascript
+static casinocoinTimeNow(): number {
+    return this.unixToCasinocoinTimestamp(Date.now());
+}
+```

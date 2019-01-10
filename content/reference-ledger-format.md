@@ -71,11 +71,8 @@ There are several different kinds of objects that can appear in the ledger's sta
 * [**AccountRoot** - The settings, CSC balance, and other metadata for one account.](#accountroot)
 * [**Amendments** - Singleton object with status of enabled and pending amendments.](#amendments)
 * [**DirectoryNode** - Contains links to other objects.](#directorynode)
-* [**Escrow** - Contains CSC held for a conditional payment.](#escrow)
 * [**FeeSettings** - Singleton object with consensus-approved base transaction cost and reserve requirements.](#feesettings)
 * [**LedgerHashes** - Lists of prior ledger versions' hashes for history lookup.](#ledgerhashes)
-* [**Offer** - An offer to exchange currencies, known in finance as an _order_.](#offer)
-* [**PayChannel** - A channel for asynchronous CSC payments.](#paychannel)
 * [**CasinocoinState** - Links two accounts, tracking the balance of one currency between them. The concept of a _trust line_ is really an abstraction of this object type.](#casinocoinstate)
 * [**SignerList** - A list of addresses for multi-signing transactions.](#signerlist)
 
@@ -217,31 +214,11 @@ The `DirectoryNode` object type provides a list of links to other objects in the
 
 There are two kinds of Directories:
 
-* **Owner directories** list other objects owned by an account, such as `CasinocoinState` or `Offer` objects.
-* **Offer directories** list the offers available in the distributed exchange. A single Offer directory contains all the offers that have the same exchange rate for the same issuances.
+* **Owner directories** list other objects owned by an account, such as `CasinocoinState`.
 
 Example Directories:
 
 <!-- MULTICODE_BLOCK_START -->
-
-*Offer Directory*
-
-```json
-{
-    "ExchangeRate": "4F069BA8FF484000",
-    "Flags": 0,
-    "Indexes": [
-        "AD7EAE148287EF12D213A251015F86E6D4BD34B3C4A0A1ED9A17198373F908AD"
-    ],
-    "LedgerEntryType": "DirectoryNode",
-    "RootIndex": "1BBEF97EDE88D40CEE2ADE6FEF121166AFE80D99EBADB01A4F069BA8FF484000",
-    "TakerGetsCurrency": "0000000000000000000000000000000000000000",
-    "TakerGetsIssuer": "0000000000000000000000000000000000000000",
-    "TakerPaysCurrency": "0000000000000000000000004A50590000000000",
-    "TakerPaysIssuer": "5BBC0F22F61D9224A110650CFE21CC0C4BE13098",
-    "index": "1BBEF97EDE88D40CEE2ADE6FEF121166AFE80D99EBADB01A4F069BA8FF484000"
-}
-```
 
 *Owner Directory*
 
@@ -270,18 +247,12 @@ Example Directories:
 | `IndexNext`         | Number    | UInt64    | (Optional) If this Directory consists of multiple pages, this ID links to the next object in the chain, wrapping around at the end. |
 | `IndexPrevious`     | Number    | UInt64    | (Optional) If this Directory consists of multiple pages, this ID links to the previous object in the chain, wrapping around at the beginning. |
 | `Owner`             | String    | AccountID | (Owner Directories only) The address of the account that owns the objects in this directory. |
-| `ExchangeRate`      | Number    | UInt64    | (Offer Directories only) **DEPRECATED**. Do not use. |
-| `TakerPaysCurrency` | String    | Hash160   | (Offer Directories only) The currency code of the TakerPays amount from the offers in this directory. |
-| `TakerPaysIssuer`   | String    | Hash160   | (Offer Directories only) The issuer of the TakerPays amount from the offers in this directory. |
-| `TakerGetsCurrency` | String    | Hash160   | (Offer Directories only) The currency code of the TakerGets amount from the offers in this directory. |
-| `TakerGetsIssuer`   | String    | Hash160   | (Offer Directories only) The issuer of the TakerGets amount from the offers in this directory. |
 
 ### Directory ID Formats
 
 There are three different formulas for creating the ID of a DirectoryNode, depending on which of the following the DirectoryNode represents:
 
 * The first page (also called the root) of an Owner Directory
-* The first page of an Offer Directory
 * Later pages of either type
 
 **The first page of an Owner Directory** has an ID that is the [SHA-512Half](#sha512half) of the following values put together:
@@ -289,83 +260,12 @@ There are three different formulas for creating the ID of a DirectoryNode, depen
 * The Owner Directory space key (`0x004F`)
 * The AccountID from the `Owner` field.
 
-**The first page of an Offer Directory** has a special ID: the higher 192 bits define the order book, and the remaining 64 bits define the exchange rate of the offers in that directory. (The ID is big-endian, so the book is in the more significant bits, which come first, and the quality is in the less significant bits which come last.) This provides a way to iterate through an order book from best offers to worst. Specifically: the first 192 bits are the first 192 bits of the [SHA-512Half](#sha512half) of the following values put together:
-
-* The Book Directory space key (`0x0042`)
-* The 160-bit currency code from the `TakerPaysCurrency`
-* The 160-bit currency code from the `TakerGetsCurrency`
-* The AccountID from the `TakerPaysIssuer`
-* The AccountID from the `TakerGetsIssuer`
-
-The lower 64 bits of an Offer Directory's ID represent the TakerPays amount divided by TakerGets amount from the offer(s) in that directory as a 64-bit number in the CSC Ledger's internal amount format.
-
-**If the DirectoryNode is not the first page in the Directory** (regardless of whether it is an Owner Directory or an Offer Directory), then it has an ID that is the [SHA-512Half](#sha512half) of the following values put together:
+**If the DirectoryNode is not the first page in the Directory** (regardless of whether it is an Owner Directory), then it has an ID that is the [SHA-512Half](#sha512half) of the following values put together:
 
 * The DirectoryNode space key (`0x0064`)
 * The ID of the root DirectoryNode
 * The page number of this object. (Since 0 is the root DirectoryNode, this value is an integer 1 or higher.)
 
-
-## Escrow
-[[Source]<br>](https://github.com/casinocoin/casinocoind/blob/4.0.1/src/casinocoin/protocol/impl/LedgerFormats.cpp#L90-L101 "Source")
-
-_(Requires the [Escrow Amendment](reference-amendments.html#escrow).)_
-
-The `Escrow` object type represents a held payment of CSC waiting to be executed or canceled. An [EscrowCreate transaction][] creates an `Escrow` object in the ledger. A successful [EscrowFinish][] or [EscrowCancel][] transaction deletes the object. If the ``Escrow`` object has a [_crypto-condition_](https://tools.ietf.org/html/draft-thomas-crypto-conditions-02), the payment can only succeed if an EscrowFinish transaction provides the corresponding _fulfillment_ that satisfies the condition. (The only supported crypto-condition type is [PREIMAGE-SHA-256](https://tools.ietf.org/html/draft-thomas-crypto-conditions-02#section-8.1).) If the `Escrow` object has a `FinishAfter` time, the held payment can only execute after that time.
-
-An `Escrow` object is associated with two addresses:
-
-- The owner, who provides the CSC when creating the `Escrow` object. If the held payment is canceled, the CSC returns to the owner.
-- The destination, where the CSC is paid when the held payment succeeds. The destination can be the same as the owner.
-
-Example `Escrow` object:
-
-```json
-{
-    "Account": "cDarPNJEpCnpBZSfmcquydockkePkjPGA2",
-    "Amount": "10000",
-    "CancelAfter": 545440232,
-    "Condition": "A0258020A82A88B2DF843A54F58772E4A3861866ECDB4157645DD9AE528C1D3AEEDABAB6810120",
-    "Destination": "ca5nK24KXen9AHvsdFTKHSANinZseWnPcX",
-    "DestinationTag": 23480,
-    "FinishAfter": 545354132,
-    "Flags": 0,
-    "LedgerEntryType": "Escrow",
-    "OwnerNode": "0000000000000000",
-    "DestinationNode": "0000000000000000",
-    "PreviousTxnID": "C44F2EB84196B9AD820313DBEBA6316A15C9A2D35787579ED172B87A30131DA7",
-    "PreviousTxnLgrSeq": 28991004,
-    "SourceTag": 11747,
-    "index": "DC5F3851D8A1AB622F957761E5963BC5BD439D5C24AC6AD7AC4523F0640244AC"
-}
-```
-
-An `Escrow` object has the following fields:
-
-| Name              | JSON Type | [Internal Type][] | Description |
-|-------------------|-----------|---------------|-------------|
-| `LedgerEntryType`   | String    | UInt16    | The value `0x0075`, mapped to the string `Escrow`, indicates that this object is an `Escrow` object. |
-| `Account`           | String | AccountID | The address of the owner (sender) of this held payment. This is the account that provided the CSC, and gets it back if the held payment is canceled. |
-| `Destination`       | String | AccountID | The destination address where the CSC is paid if the held payment is successful. |
-| `Amount`            | String | Amount    | The amount of CSC, in drops, to be delivered by the held payment. |
-| `Condition`         | String | VariableLength | _(Optional)_ A [PREIMAGE-SHA-256 crypto-condition](https://tools.ietf.org/html/draft-thomas-crypto-conditions-02#section-8.1), as hexadecimal. If present, the [EscrowFinish transaction][] must contain a fulfillment that satisfies this condition. |
-| `CancelAfter`       | Number | UInt32 | _(Optional)_ The held payment can be canceled if and only if this field is present _and_ the time it specifies has passed. Specifically, this is specified as [seconds since the CasinoCoin Epoch](reference-casinocoind.html#specifying-time) and it "has passed" if it's earlier than the close time of the previous validated ledger. |
-| `FinishAfter`       | Number | UInt32 | _(Optional)_ The time, in [seconds since the CasinoCoin Epoch](reference-casinocoind.html#specifying-time), after which this held payment can be finished. Any [EscrowFinish transaction][] before this time fails. (Specifically, this is compared with the close time of the previous validated ledger.) |
-| `SourceTag`         | Number | UInt32 | _(Optional)_ An arbitrary tag to further specify the source for this held payment, such as a hosted recipient at the owner's address. |
-| `DestinationTag`    | Number | UInt32 | _(Optional)_ An arbitrary tag to further specify the destination for this held payment, such as a hosted recipient at the destination address. |
-| `OwnerNode`         | String    | UInt64    | A hint indicating which page of the owner directory links to this object, in case the directory consists of multiple pages. **Note:** The object does not contain a direct link to the owner directory containing it, since that value can be derived from the `Account`. |
-| `DestinationNode`   | String    | UInt64    | _(Optional)_ A hint indicating which page of the destination's owner directory links to this object, in case the directory consists of multiple pages. Omitted on escrows created before enabling the [fix1523 amendment](reference-amendments.html#fix1523). |
-| `PreviousTxnID`     | String | Hash256 | The identifying hash of the transaction that most recently modified this object. |
-| `PreviousTxnLgrSeq` | Number | UInt32 | The [index of the ledger](#ledger-index) that contains the transaction that most recently modified this object. |
-
-
-### Escrow ID Format
-
-The ID of an `Escrow` object is the [SHA-512Half](#sha512half) of the following values put together:
-
-* The Escrow space key (`0x0075`)
-* The AccountID of the sender of the [EscrowCreate transaction][] that created the `Escrow` object
-* The Sequence number of the [EscrowCreate transaction][] that created the `Escrow` object
 
 ## FeeSettings
 [[Source]<br>](https://github.com/casinocoin/casinocoind/blob/master/src/casinocoin/protocol/impl/LedgerFormats.cpp#L115-L120 "Source")
@@ -481,173 +381,6 @@ The **"previous history"** `LedgerHashes` objects have an ID that is the [SHA-51
     **Tip:** Dividing by 65536 keeps the most significant 16 bits, which are the same for all the flag ledgers listed in a "previous history" object, and only those ledgers. You can use this fact to look up the `LedgerHashes` object that contains the hash of any flag ledger.
 
 
-## Offer
-[[Source]<br>](https://github.com/casinocoin/casinocoind/blob/4.0.1/src/casinocoin/protocol/impl/LedgerFormats.cpp#L57 "Source")
-
-The `Offer` object type describes an offer to exchange currencies, more traditionally known as an _order_, in the CSC Ledger's distributed exchange. An [OfferCreate transaction][] only creates an `Offer` object in the ledger when the offer cannot be fully executed immediately by consuming other offers already in the ledger.
-
-An offer can become unfunded through other activities in the network, while remaining in the ledger. However, `casinocoind` automatically prunes any unfunded offers it happens across in the course of transaction processing (and _only_ transaction processing, because the ledger state must only be changed by transactions). For more information, see [lifecycle of an offer](reference-transaction-format.html#lifecycle-of-an-offer).
-
-Example `Offer` object:
-
-```json
-{
-    "Account": "cBqb89MRQJnMPq8wTwEbtz4kvxrEDfcYvt",
-    "BookDirectory": "ACC27DE91DBA86FC509069EAF4BC511D73128B780F2E54BF5E07A369E2446000",
-    "BookNode": "0000000000000000",
-    "Flags": 131072,
-    "LedgerEntryType": "Offer",
-    "OwnerNode": "0000000000000000",
-    "PreviousTxnID": "F0AB71E777B2DA54B86231E19B82554EF1F8211F92ECA473121C655BFC5329BF",
-    "PreviousTxnLgrSeq": 14524914,
-    "Sequence": 866,
-    "TakerGets": {
-        "currency": "XAG",
-        "issuer": "c9Dr5xwkeLegBeXq6ujinjSBLQzQ1zQGjH",
-        "value": "37"
-    },
-    "TakerPays": "79550000000",
-    "index": "96F76F27D8A327FC48753167EC04A46AA0E382E6F57F32FD12274144D00F1797"
-}
-```
-
-An `Offer` object has the following fields:
-
-| Name              | JSON Type | [Internal Type][] | Description |
-|-------------------|-----------|---------------|-------------|
-| `LedgerEntryType`   | String    | UInt16    | The value `0x006F`, mapped to the string `Offer`, indicates that this object describes an order to trade currency. |
-| `Flags`             | Number    | UInt32    | A bit-map of boolean flags enabled for this offer. |
-| `Account`           | String    | AccountID | The address of the account that owns this offer. |
-| `Sequence`          | Number    | UInt32    | The `Sequence` value of the [OfferCreate][] transaction that created this `Offer` object. Used in combination with the `Account` to identify this Offer. |
-| `TakerPays`         | String or Object | Amount | The remaining amount and type of currency requested by the offer creator. |
-| `TakerGets`         | String or Object | Amount | The remaining amount and type of currency being provided by the offer creator. |
-| `BookDirectory`     | String    | UInt256   | The ID of the [Offer Directory](#directorynode) that links to this offer. |
-| `BookNode`          | String    | UInt64    | A hint indicating which page of the offer directory links to this object, in case the directory consists of multiple pages. |
-| `OwnerNode`         | String    | UInt64    | A hint indicating which page of the owner directory links to this object, in case the directory consists of multiple pages. **Note:** The offer does not contain a direct link to the owner directory containing it, since that value can be derived from the `Account`. |
-| `PreviousTxnID`     | String | Hash256 | The identifying hash of the transaction that most recently modified this object. |
-| `PreviousTxnLgrSeq` | Number | UInt32 | The [index of the ledger](#ledger-index) that contains the transaction that most recently modified this object. |
-| `Expiration`        | Number    | UInt32    | (Optional) Indicates the time after which this offer is considered unfunded. See [Specifying Time](reference-casinocoind.html#specifying-time) for details. |
-
-### Offer Flags
-
-There are several options which can be either enabled or disabled when an [OfferCreate transaction][] creates an offer object. In the ledger, flags are represented as binary values that can be combined with bitwise-or operations. The bit values for the flags in the ledger are different than the values used to enable or disable those flags in a transaction. Ledger flags have names that begin with _lsf_.
-
-`Offer` objects can have the following flag values:
-
-| Flag Name | Hex Value | Decimal Value | Description | Corresponding [OfferCreate Flag](reference-transaction-format.html#offercreate-flags) |
-|-----------|-----------|---------------|-------------|------------------------|
-| lsfPassive | 0x00010000 | 65536 | The object was placed as a passive offer. This has no effect on the object in the ledger. | tfPassive |
-| lsfSell   | 0x00020000 | 131072 | The object was placed as a sell offer. This has no effect on the object in the ledger (because tfSell only matters if you get a better rate than you asked for, which cannot happen after the object enters the ledger). | tfSell |
-
-### Offer ID Format
-
-The ID of an `Offer` object is the [SHA-512Half](#sha512half) of the following values put together:
-
-* The Offer space key (`0x006F`)
-* The AccountID of the account placing the offer
-* The Sequence number of the [OfferCreate transaction][] that created the offer
-
-
-
-## PayChannel
-[[Source]<br>](https://github.com/casinocoin/casinocoind/blob/develop/src/casinocoin/protocol/impl/LedgerFormats.cpp#L134 "Source")
-
-_(Requires the [PayChan Amendment](reference-amendments.html#paychan).)_
-
-The `PayChannel` object type represents a payment channel. Payment channels enable small, rapid off-ledger payments of CSC that can be later reconciled with the consensus ledger. A payment channel holds a balance of CSC that can only be paid out to a specific destination address until the channel is closed. Any unspent CSC is returned to the channel's owner (the source address that created and funded it) when the channel closes.
-
-The [PaymentChannelCreate transaction][] type creates a `PayChannel` object. The [PaymentChannelFund][] and [PaymentChannelClaim transaction][] types modify existing `PayChannel` objects.
-
-When a payment channel expires, at first it remains on the ledger, because only new transactions can modify ledger contents. Transaction processing automatically closes a payment channel when any transaction accesses it after the expiration. To close an expired channel and return the unspent CSC to the owner, some address must send a new PaymentChannelClaim or PaymentChannelFund transaction accessing the channel.
-
-For an example of using payment channels, see the [Payment Channels Tutorial](tutorial-paychan.html).
-
-<!--{# TODO: provide cross-references to tutorial, concept, and tx types when they are ready #}-->
-
-Example `PayChannel` object:
-
-```json
-{
-    "Account": "cBqb89MRQJnMPq8wTwEbtz4kvxrEDfcYvt",
-    "Destination": "cDarPNJEpCnpBZSfmcquydockkePkjPGA2",
-    "Amount": "4325800",
-    "Balance": "2323423",
-    "PublicKey": "32D2471DB72B27E3310F355BB33E339BF26F8392D5A93D3BC0FC3B566612DA0F0A",
-    "SettleDelay": 3600,
-    "Expiration": 536027313,
-    "CancelAfter": 536891313,
-    "SourceTag": 0,
-    "DestinationTag": 1002341,
-    "Flags": 0,
-    "LedgerEntryType": "PayChannel",
-    "OwnerNode": "0000000000000000",
-    "PreviousTxnID": "F0AB71E777B2DA54B86231E19B82554EF1F8211F92ECA473121C655BFC5329BF",
-    "PreviousTxnLgrSeq": 14524914,
-    "index": "96F76F27D8A327FC48753167EC04A46AA0E382E6F57F32FD12274144D00F1797"
-}
-```
-
-A `PayChannel` object has the following fields:
-
-| Name                | JSON Type | [Internal Type][] | Description            |
-|:--------------------|:----------|:------------------|:-----------------------|
-| `LedgerEntryType`   | String    | UInt16            | The value `0x0078`, mapped to the string `PayChannel`, indicates that this object is a payment channel object. |
-| `Account`           | String    | AccountID         | The source address that owns this payment channel. This comes from the sending address of the transaction that created the channel. |
-| `Destination`       | String    | AccountID         | The destination address for this payment channel. While the payment channel is open, this address is the only one that can receive CSC from the channel. This comes from the `Destination` field of the transaction that created the channel. |
-| `Amount`            | String    | Amount            | Total [CSC, in drops][], that has been allocated to this channel. This includes CSC that has been paid to the destination address. This is initially set by the transaction that created the channel and can be increased if the source address sends a PaymentChannelFund transaction. |
-| `Balance`           | String    | Amount            | Total [CSC, in drops][], already paid out by the channel. The difference between this value and the `Amount` field is how much CSC can still be paid to the destination address with PaymentChannelClaim transactions. If the channel closes, the remaining difference is returned to the source address. |
-| `PublicKey`         | String    | PubKey            | Public key, in hexadecimal, of the key pair that can be used to sign claims against this channel. This can be any valid secp256k1 or Ed25519 public key. This is set by the transaction that created the channel and must match the public key used in claims against the channel. The channel source address can also send CSC from this channel to the destination without signed claims. |
-| `SettleDelay`       | Number    | UInt32            | Number of seconds the source address must wait to close the channel if it still has any CSC in it. Smaller values mean that the destination address has less time to redeem any outstanding claims after the source address requests to close the channel. Can be any value that fits in a 32-bit unsigned integer (0 to 2^32-1). This is set by the transaction that creates the channel. |
-| `OwnerNode`         | String    | UInt64            | A hint indicating which page of the source address's owner directory links to this object, in case the directory consists of multiple pages. |
-| `PreviousTxnID`     | String    | Hash256           | The identifying hash of the transaction that most recently modified this object. |
-| `PreviousTxnLgrSeq` | Number    | UInt32            | The [index of the ledger](#ledger-index) that contains the transaction that most recently modified this object. |
-| `Flags`             | Number    | UInt32            | A bit-map of boolean flags enabled for this payment channel. Currently, the protocol defines no flags for `PayChannel` objects. |
-| `Expiration`        | Number    | UInt32            | _(Optional)_ The mutable expiration time for this payment channel, in [seconds since the CasinoCoin Epoch](reference-casinocoind.html#specifying-time). The channel is expired if this value is present and smaller than the previous ledger's [`close_time` field](#header-format). See [Setting Channel Expiration](#setting-channel-expiration) for more details. |
-| `CancelAfter`       | Number    | UInt32            | _(Optional)_ The immutable expiration time for this payment channel, in [seconds since the CasinoCoin Epoch](reference-casinocoind.html#specifying-time). This channel is expired if this value is present and smaller than the previous ledger's [`close_time` field](#header-format). This is optionally set by the transaction that created the channel, and cannot be changed. |
-| `SourceTag`           | Number    | UInt32            | _(Optional)_ An arbitrary tag to further specify the source for this payment channel, such as a hosted recipient at the owner's address. |
-| `DestinationTag`      | Number    | UInt32            | _(Optional)_ An arbitrary tag to further specify the destination for this payment channel, such as a hosted recipient at the destination address. |
-
-[CSC, in drops]: reference-casinocoind.html#specifying-currency-amounts
-
-### Setting Channel Expiration
-
-The `Expiration` field of a payment channel is the mutable expiration time, in contrast to the immutable expiration time represented by the `CancelAfter` field. The expiration of a channel is always considered relative to the [`close_time` field](#header-format) of the previous ledger. The `Expiration` field is omitted when a `PayChannel` object is created. There are several ways the `Expiration` field of a `PayChannel` object can be updated, which can be summarized as follows: a channel's source address can set the `Expiration` of the channel freely as long as the channel always remains open at least `SettleDelay` seconds after the first attempt to close it.
-
-#### Source Address
-
-The source address can set the `Expiration` directly with the PaymentChannelFund transaction type. The new value must not be earlier than whichever of the following values is earliest:
-
-- The current `Expiration` value (if one is set)
-- The previous ledger's close time plus the `SettleDelay` of the channel
-
-In other words, the source address can always make the `Expiration` later if an expiration is already set. The source can make an `Expiration` value earlier or set an `Expiration` if one isn't currently set, as long as the new value is at least `SettleDelay` seconds in the future. If the source address attempts to set an invalid `Expiration` date, the transaction fails with the `temBAD_EXPIRATION` error code.
-
-The source address can also set the `Expiration` with the `tfClose` flag of the PaymentChannelClaim transaction type. If the flag is enabled, the ledger automatically sets the `Expiration` to whichever of the following values is earlier:
-
-- The current `Expiration` value (if one is set)
-- The previous ledger's close time plus the `SettleDelay` of the channel
-
-The source address can remove the `Expiration` with the `tfRenew` flag of the PaymentChannelClaim transaction type.
-
-#### Destination Address
-
-The destination address cannot set the `Expiration` field. However, the destination address can use the PaymentChannelClaim's `tfClose` flag to close a channel immediately.
-
-#### Other Addresses
-
-If any other address attempts to set an `Expiration` field, the transaction fails with the `tecNO_PERMISSION` error code. However, if the channel is already expired, the transaction causes the channel to close and results in `tesSUCCESS` instead.
-
-
-### PayChannel ID Format
-
-The ID of a `PayChannel` object is the [SHA-512Half](#sha512half) of the following values put together:
-
-* The PayChannel space key (`0x0078`)
-* The AccountID of the source account
-* The AccountID of the destination account
-* The Sequence number of the transaction that created the channel
-
-
 
 ## CasinocoinState
 [[Source]<br>](https://github.com/casinocoin/casinocoind/blob/4.0.1/src/casinocoin/protocol/impl/LedgerFormats.cpp#L70 "Source")
@@ -662,7 +395,7 @@ Example `CasinocoinState` object:
 {
     "Balance": {
         "currency": "USD",
-        "issuer": "rrrrrrrrrrrrrrrrrrrrBZbvji",
+        "issuer": "cccccccccccccccccccBZbvji",
         "value": "-10"
     },
     "Flags": 393216,
@@ -820,7 +553,7 @@ When processing a multi-signed transaction, the server dereferences the `Account
 
 ### SignerLists and Reserves
 
-A SignerList contributes to its owner's [reserve requirement](concept-reserves.html). The SignerList itself counts as two objects, and each member of the list counts as one. As a result, the total owner reserve associated with a SignerList is anywhere from 3 times to 10 times the reserve required by a single trust line ([CasinocoinState](#casinocoinstate)) or [Offer](#offer) object in the ledger.
+A SignerList contributes to its owner's [reserve requirement](concept-reserves.html). The SignerList itself counts as two objects, and each member of the list counts as one. As a result, the total owner reserve associated with a SignerList is anywhere from 3 times to 10 times the reserve required by a single trust line ([CasinocoinState](#casinocoinstate)) in the ledger.
 
 ### SignerList ID Format
 

@@ -29,7 +29,7 @@ The example addresses used in this tutorial are:
 
 Additionally, you'll need a `casinocoind` server to send transactions to. The examples in this tutorial assume a `casinocoind` server is running on the test machine (`localhost`) with an unencrypted JSON-RPC API endpoint on port **5005**.
 
-To test without transferring real CSC, you can use [CasinoCoin Test Net](https://casinocoin.org/build/casinocoin-test-net/) addresses with Test Net CSC. If you do use the CasinoCoin Test Net, you can use the Test Net servers' JSON-RPC API by connecting to `https://api.altnet.rippletest.net:51234` instead of `http://localhost:5005/`.
+To test without transferring real CSC, you can use [CasinoCoin Test Net](https://casinocoin.org/build/casinocoin-test-net/) addresses with Test Net CSC. If you do use the CasinoCoin Test Net, you can use the Test Net servers' JSON-RPC API by connecting to  instead of `http://localhost:5005/`.
 
 You can use any amount of CSC for the payment channels. The example values in this tutorial set aside 100 CSC (`10000000000` drops) in a payment channel for at least 1 day.
 

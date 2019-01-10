@@ -230,7 +230,7 @@ Every transaction type has the same set of fundamental fields. Field names are c
 | SigningPubKey          | String           | PubKey            | (Automatically added when signing) Hex representation of the public key that corresponds to the private key used to sign this transaction. If an empty string, indicates a multi-signature is present in the `Signers` field instead. |
 | [Signers][]            | Array            | Array             | _(Optional)_ Array of objects that represent a [multi-signature](#multi-signing) which authorizes this transaction. |
 | SourceTag              | Unsigned Integer | UInt32            | _(Optional)_ Arbitrary integer used to identify the reason for this payment, or a sender on whose behalf this transaction is made. Conventionally, a refund should specify the initial payment's `SourceTag` as the refund payment's `DestinationTag`. |
-| TransactionType        | String           | UInt16            | The type of transaction. Valid types include: `Payment`, `OfferCreate`, `OfferCancel`, `TrustSet`, `AccountSet`, `SetRegularKey`, `SignerListSet`, `EscrowCreate`, `EscrowFinish`, `EscrowCancel`, `PaymentChannelCreate`, `PaymentChannelFund`, and `PaymentChannelClaim`. |
+| TransactionType        | String           | UInt16            | The type of transaction. Valid types include: `Payment`, `AccountSet`, `SetRegularKey`, and `SignerListSet`. |
 | TxnSignature           | String           | VariableLength    | (Automatically added when signing) The signature that verifies this transaction as originating from the account it says it is from. |
 
 [AccountTxnID]: #accounttxnid
@@ -347,7 +347,7 @@ The only flag that applies globally to all transactions is as follows:
 
 | Flag Name           | Hex Value  | Decimal Value | Description               |
 |:--------------------|:-----------|:--------------|:--------------------------|
-| tfFullyCanonicalSig | 0x80000000 | 2147483648    | Require a fully-canonical signature, to protect a transaction from [transaction malleability](https://wiki.ripple.com/Transaction_Malleability) exploits. |
+| tfFullyCanonicalSig | 0x80000000 | 2147483648    | Require a fully-canonical signature, to protect a transaction from [transaction malleability] exploits. |
 
 
 
@@ -362,18 +362,9 @@ All transactions have certain fields in common:
 Each transaction type has additional fields relevant to the type of action it causes:
 
 * [AccountSet - Set options on an account](#accountset)
-* [EscrowCancel - Reclaim escrowed CSC](#escrowcancel)
-* [EscrowCreate - Create an escrowed CSC payment](#escrowcreate)
-* [EscrowFinish - Deliver escrowed CSC to recipient](#escrowfinish)
-* [OfferCancel - Withdraw a currency-exchange order](#offercancel)
-* [OfferCreate - Submit an order to exchange currency](#offercreate)
 * [Payment - Send funds from one account to another](#payment)
-* [PaymentChannelClaim - Claim money from a payment channel](#paymentchannelclaim)
-* [PaymentChannelCreate - Open a new payment channel](#paymentchannelcreate)
-* [PaymentChannelFund - Add more CSC to a payment channel](#paymentchannelfund)
 * [SetRegularKey - Set an account's regular key](#setregularkey)
 * [SignerListSet - Set multi-signing settings](#signerlistset)
-* [TrustSet - Add or modify a trust line](#trustset)
 
 <!--{# coming soon: 
 * [CheckCancel - Cancel a check](#checkcancel)
@@ -389,29 +380,11 @@ _Pseudo-Transactions_ that are not created and submitted in the usual way, but m
 
 {% include 'transactions/accountset.md' %}
 
-{% include 'transactions/escrowcancel.md' %}
-
-{% include 'transactions/escrowcreate.md' %}
-
-{% include 'transactions/escrowfinish.md' %}
-
-{% include 'transactions/offercancel.md' %}
-
-{% include 'transactions/offercreate.md' %}
-
 {% include 'transactions/payment.md' %}
-
-{% include 'transactions/paymentchannelclaim.md' %}
-
-{% include 'transactions/paymentchannelcreate.md' %}
-
-{% include 'transactions/paymentchannelfund.md' %}
 
 {% include 'transactions/setregularkey.md' %}
 
 {% include 'transactions/signerlistset.md' %}
-
-{% include 'transactions/trustset.md' %}
 
 
 # Pseudo-Transactions
@@ -582,11 +555,9 @@ These codes indicate that the transaction was malformed, and cannot succeed acco
 | `temBAD_AMOUNT`               | An amount specified by the transaction (for example the destination `Amount` or `SendMax` values of a [Payment](#payment)) was invalid, possibly because it was a negative number. |
 | `temBAD_AUTH_MASTER`         | The key used to sign this transaction does not match the master key for the account sending it, and the account does not have a [Regular Key](#setregularkey) set. |
 | `temBAD_CURRENCY`             | The transaction improperly specified a currency field. See [Specifying Currency Amounts][Currency Amount] for the correct format. |
-| `temBAD_EXPIRATION`           | The transaction improperly specified an expiration value, for example as part of an [OfferCreate transaction][]. Alternatively, the transaction did not specify a required expiration value, for example as part of an [EscrowCreate transaction][]. |
+| `temBAD_EXPIRATION`           | The transaction improperly specified an expiration value. Alternatively, the transaction did not specify a required expiration value. |
 | `temBAD_FEE`                  | The transaction improperly specified its `Fee` value, for example by listing a non-CSC currency or some negative amount of CSC. |
 | `temBAD_ISSUER`               | The transaction improperly specified the `issuer` field of some currency included in the request. |
-| `temBAD_LIMIT`                | The [TrustSet transaction][] improperly specified the `LimitAmount` value of a trustline. |
-| `temBAD_OFFER`                | The [OfferCreate transaction][] specifies an invalid offer, such as offering to trade CSC for itself, or offering a negative amount. |
 | `temBAD_PATH`                 | The [Payment](#payment) transaction specifies one or more [Paths](#paths) improperly, for example including an issuer for CSC, or specifying an account differently. |
 | `temBAD_PATH_LOOP`           | One of the [Paths](#paths) in the [Payment](#payment) transaction was flagged as a loop, so it cannot be processed in a bounded amount of time. |
 | `temBAD_SEND_CSC_LIMIT`     | The [Payment](#payment) transaction used the [tfLimitQuality](#limit-quality) flag in a direct CSC-to-CSC payment, even though CSC-to-CSC payments do not involve any conversions. |
@@ -598,14 +569,13 @@ These codes indicate that the transaction was malformed, and cannot succeed acco
 | `temBAD_SIGNATURE`            | The signature to authorize this transaction is either missing, or formed in a way that is not a properly-formed signature. (See [tecNO_PERMISSION](#tec-codes) for the case where the signature is properly formed, but not authorized for this account.) |
 | `temBAD_SRC_ACCOUNT`         | The `Account` on whose behalf this transaction is being sent (the "source account") is not a properly-formed [account](concept-accounts.html) address. |
 | `temBAD_TRANSFER_RATE`       | The [`TransferRate` field of an AccountSet transaction](#transferrate) is not properly formatted or out of the acceptable range. |
-| `temDST_IS_SRC`              | The [TrustSet transaction][] improperly specified the destination of the trust line (the `issuer` field of `LimitAmount`) as the `Account` sending the transaction. You cannot extend a trust line to yourself. (In the future, this code could also apply to other cases where the destination of a transaction is not allowed to be the account sending it.) |
-| `temDST_NEEDED`               | The transaction improperly omitted a destination. This could be the `Destination` field of a [Payment](#payment) transaction, or the `issuer` sub-field of the `LimitAmount` field fo a `TrustSet` transaction. |
+| `temDST_NEEDED`               | The transaction improperly omitted a destination. This could be the `Destination` field of a [Payment](#payment) transaction. |
 | `temINVALID`                   | The transaction is otherwise invalid. For example, the transaction ID may not be the right format, the signature may not be formed properly, or something else went wrong in understanding the transaction. |
 | `temINVALID_FLAG`             | The transaction includes a [Flag](#flags) that does not exist, or includes a contradictory combination of flags. |
 | `temMALFORMED`                 | Unspecified problem with the format of the transaction. |
 | `temREDUNDANT`                 | The transaction would do nothing; for example, it is sending a payment directly to the sending account, or creating an offer to buy and sell the same currency from the same issuer. |
 | `temREDUNDANT_SEND_MAX`      | |
-| `temRIPPLE_EMPTY`             | The [Payment](#payment) transaction includes an empty `Paths` field, but paths are necessary to complete this payment. |
+| `temCASINOCOIN_EMPTY`             | The [Payment](#payment) transaction includes an empty `Paths` field, but paths are necessary to complete this payment. |
 | `temBAD_WEIGHT`                | The [SignerListSet transaction][] includes a `SignerWeight` that is invalid, for example a zero or negative value. |
 | `temBAD_SIGNER`                | The [SignerListSet transaction][] includes a signer who is invalid. For example, there may be duplicate entries, or the owner of the SignerList may also be a member. |
 | `temBAD_QUORUM`                | The [SignerListSet transaction][] has an invalid `SignerQuorum` value. Either the value is not greater than zero, or it is more than the sum of all signers in the list. |
@@ -634,7 +604,6 @@ These codes indicate that the transaction failed and was not included in a ledge
 | `tefINVARIANT_FAILED`   | An invariant check failed when trying to claim the [transaction cost](concept-transaction-cost.html). Requires the [EnforceInvariants amendment](reference-amendments.html#enforceinvariants). If you can reproduce this error, please [report an issue](https://github.com/casinocoin/casinocoind/issues). |
 | `tefMASTER_DISABLED`    | The transaction was signed with the account's master key, but the account has the `lsfDisableMaster` field set. |
 | `tefMAX_LEDGER`         | The transaction included a [`LastLedgerSequence`](#lastledgersequence) parameter, but the current ledger's sequence number is already higher than the specified value. |
-| `tefNO_AUTH_REQUIRED`  | The [TrustSet transaction][] tried to mark a trustline as authorized, but the `lsfRequireAuth` flag is not enabled for the corresponding account, so authorization is not necessary. |
 | `tefNOT_MULTI_SIGNING` | The transaction was [multi-signed](#multi-signing), but the sending account has no SignerList defined. |
 | `tefPAST_SEQ`           | The sequence number of the transaction is lower than the current sequence number of the account sending the transaction. |
 | `tefWRONG_PRIOR`        | The transaction contained an `AccountTxnID` field (or the deprecated `PreviousTxnID` field), but the transaction specified there does not match the account's previous transaction. |
@@ -659,7 +628,7 @@ These codes indicate that the transaction failed, but it could apply successfull
 
 ### tes Success
 
-The code `tesSUCCESS` is the only code that indicates a transaction succeeded. This does not always mean it did what it was supposed to do. (For example, an [OfferCancel][] can "succeed" even if there is no offer for it to cancel.) Success uses the numerical value 0.
+The code `tesSUCCESS` is the only code that indicates a transaction succeeded. This does not always mean it did what it was supposed to do. Success uses the numerical value 0.
 
 | Code       | Explanation                                                     |
 |:-----------|:----------------------------------------------------------------|
@@ -672,14 +641,12 @@ These codes indicate that the transaction failed, but it was applied to a ledger
 | Code                       | Value | Explanation                             |
 |:---------------------------|:------|:----------------------------------------|
 | `tecCLAIM`                 | 100   | Unspecified failure, with transaction cost destroyed. |
-| `tecCRYPTOCONDITION_ERROR` | 146   | This [EscrowCreate][] or [EscrowFinish][] transaction contained a malformed or mismatched crypto-condition. |
 | `tecDIR_FULL`              | 121   | The address sending the transaction cannot own any more objects in the ledger. |
 | `tecDST_TAG_NEEDED`        | 143   | The [Payment](#payment) transaction omitted a destination tag, but the destination account has the `lsfRequireDestTag` flag enabled. |
 | `tecFAILED_PROCESSING`     | 105   | An unspecified error occurred when processing the transaction. |
-| `tecFROZEN`                | 137   | The [OfferCreate transaction][] failed because one or both of the assets involved are subject to a [global freeze](concept-freeze.html). |
 | `tecINSUF_RESERVE_LINE`    | 122   | The transaction failed because the sending account does not have enough CSC to create a new trust line. (See: [Reserves](concept-reserves.html)) This error occurs when the counterparty already has a trust line in a non-default state to the sending account for the same currency. (See `tecNO_LINE_INSUF_RESERVE` for the other case.) |
 | `tecINSUF_RESERVE_OFFER`   | 123   | The transaction failed because the sending account does not have enough CSC to create a new Offer. (See: [Reserves](concept-reserves.html)) |
-| `tecINSUFFICIENT_RESERVE`  | 141   | The transaction would increase the [reserve requirement](concept-reserves.html) higher than the sending account's balance. [SignerListSet][], [PaymentChannelCreate][], [PaymentChannelFund][], and [EscrowCreate][] can return this error code. See [SignerLists and Reserves](reference-ledger-format.html#signerlists-and-reserves) for more information. |
+| `tecINSUFFICIENT_RESERVE`  | 141   | The transaction would increase the [reserve requirement](concept-reserves.html) higher than the sending account's balance. [SignerListSet][] can return this error code. See [SignerLists and Reserves](reference-ledger-format.html#signerlists-and-reserves) for more information. |
 | `tecINTERNAL`              | 144   | Unspecified internal error, with transaction cost applied. This error code should not normally be returned. If you can reproduce this error, please [report an issue](https://github.com/casinocoin/casinocoind/issues). |
 | `tecINVARIANT_FAILED`      | 147   | An invariant check failed when trying to execute this transaction. Requires the [EnforceInvariants amendment](reference-amendments.html#enforceinvariants). If you can reproduce this error, please [report an issue](https://github.com/casinocoin/casinocoind/issues). |
 | `tecNEED_MASTER_KEY`       | 142   | This transaction tried to cause changes that require the master key, such as [disabling the master key or giving up the ability to freeze balances](#accountset-flags). |
@@ -689,12 +656,11 @@ These codes indicate that the transaction failed, but it was applied to a ledger
 | `tecNO_DST_INSUF_CSC`      | 125   | The account on the receiving end of the transaction does not exist, and the transaction is not sending enough CSC to create it. |
 | `tecNO_ENTRY`              | 140   | Reserved for future use.                |
 | `tecNO_ISSUER`             | 133   | The account specified in the `issuer` field of a currency amount does not exist. |
-| `tecNO_LINE`               | 135   | The `TakerPays` field of the [OfferCreate transaction][] specifies an asset whose issuer has `lsfRequireAuth` enabled, and the account making the offer does not have a trust line for that asset. (Normally, making an offer implicitly creates a trust line if necessary, but in this case it does not bother because you cannot hold the asset without authorization.) If the trust line exists, but is not authorized, `tecNO_AUTH` occurs instead. |
 | `tecNO_LINE_INSUF_RESERVE` | 126   | The transaction failed because the sending account does not have enough CSC to create a new trust line. (See: [Reserves](concept-reserves.html)) This error occurs when the counterparty does not have a trust line to this account for the same currency. (See `tecINSUF_RESERVE_LINE` for the other case.) |
 | `tecNO_LINE_REDUNDANT`     | 127   | The transaction failed because it tried to set a trust line to its default state, but the trust line did not exist. |
-| `tecNO_PERMISSION`         | 139   | The sender does not have permission to do this operation. For example, the [EscrowFinish transaction][] tried to release a held payment before its `FinishAfter` time, or someone tried to use [PaymentChannelFund][] on a channel the sender does not own. |
+| `tecNO_PERMISSION`         | 139   | The sender does not have permission to do this operation. |
 | `tecNO_REGULAR_KEY`        | 131   | The [AccountSet transaction][] tried to disable the master key, but the account does not have another way to [authorize transactions](#authorizing-transactions). If [multi-signing](#multi-signing) is enabled, this code is deprecated and `tecNO_ALTERNATIVE_KEY` is used instead. |
-| `tecNO_TARGET`             | 138   | The transaction referenced an Escrow or PayChannel ledger object that doesn't exist, either because it never existed or it has already been deleted. (For example, another [EscrowFinish transaction][] has already executed the held payment.) Alternatively, the destination account has `asfDisallowCSC` set so it cannot be the destination of this [PaymentChannelCreate][] or [EscrowCreate][] transaction. |
+| `tecNO_TARGET`             | 138   | The transaction referenced an Escrow or PayChannel ledger object that doesn't exist, either because it never existed or it has already been deleted. Alternatively, the destination account has `asfDisallowCSC` set. |
 | `tecOVERSIZE`              | 145   | This transaction could not be processed, because the server created an excessively large amount of metadata when it tried to apply the transaction. |
 | `tecOWNERS`                | 132   | The transaction requires that account sending it has a nonzero "owners count", so the transaction cannot succeed. For example, an account cannot enable the [`lsfRequireAuth`](#accountset-flags) flag if it has any trust lines or available offers. |
 | `tecPATH_DRY`              | 128   | The transaction failed because the provided paths did not have enough liquidity to send anything at all. This could mean that the source and destination accounts are not linked by trust lines. |
@@ -702,7 +668,6 @@ These codes indicate that the transaction failed, but it was applied to a ledger
 | `tecUNFUNDED`              | 129   | The transaction failed because the account does not hold enough CSC to pay the amount in the transaction _and_ satisfy the additional reserve necessary to execute this transaction. (See: [Reserves](concept-reserves.html)) |
 | `tecUNFUNDED_ADD`          | 102   | **DEPRECATED.**                         |
 | `tecUNFUNDED_PAYMENT`      | 104   | The transaction failed because the sending account is trying to send more CSC than it holds, not counting the reserve. (See: [Reserves](concept-reserves.html)) |
-| `tecUNFUNDED_OFFER`        | 103   | The [OfferCreate transaction][] failed because the account creating the offer does not have any of the `TakerGets` currency. |
 
 
 {% include 'snippets/casinocoind_versions.md' %}

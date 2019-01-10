@@ -14,7 +14,7 @@ When you run `casinocoind` in stand-alone mode, you have to tell it what ledger 
 
 In stand-alone mode, you can have `casinocoind` create a new genesis ledger. This provides a known state, with none of the ledger history from the production CSC Ledger. (This is very useful for unit tests, among other things.)
 
-* To start `casinocoind` in stand-alone mode with a new genesis ledger, use the [`-a`](https://wiki.ripple.com/Casinocoind#--standalone.2C_-a) and [`--start`](https://wiki.ripple.com/Casinocoind#--start) options:
+* To start `casinocoind` in stand-alone mode with a new genesis ledger, use the [`-a`]() and [`--start`]() options:
 
 ```
 casinocoind -a --start --conf=/path/to/casinocoind.cfg
@@ -71,13 +71,13 @@ casinocoind stop --conf=/path/to/casinocoind.cfg
 
 ### 5. Start `casinocoind` in stand-alone mode.
 
-To load the most recent ledger version, you can use the [`-a`](https://wiki.ripple.com/Casinocoind#--standalone.2C_-a) and [`--load`](https://wiki.ripple.com/Casinocoind#--load) options when starting the server:
+To load the most recent ledger version, you can use the [`-a`]() and [`--load`]() options when starting the server:
 
 ```
 casinocoind -a --load --conf=/path/to/casinocoind.cfg
 ```
 
-To instead load a specific historical ledger, use the [`--load`](https://wiki.ripple.com/Casinocoind#--load) parameter along with the `--ledger` parameter, providing the ledger index or identifying hash of the ledger version to load:
+To instead load a specific historical ledger, use the [`--load`]() parameter along with the `--ledger` parameter, providing the ledger index or identifying hash of the ledger version to load:
 
 ```
 casinocoind -a --load --ledger 19860944 --conf=/path/to/casinocoind.cfg

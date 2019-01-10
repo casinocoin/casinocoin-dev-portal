@@ -1,18 +1,18 @@
 const {CasinocoinAPI} = require('casinocoin-libjs');
 
 const api = new CasinocoinAPI({
-  server: 'wss://ws01.casinocoin.org', // Public rippled server
+  server: 'wss://ws01.casinocoin.org', // Public casinocoind  server
   port: 4443
 });
 api.on('error', (errorCode, errorMessage) => {
   console.log(errorCode + ': ' + errorMessage);
 });
 
-const issuing_address = 'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn';
+const issuing_address = 'cf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn';
 const issuing_secret = 's████████████████████████████';
     // Best practice: get your secret from an encrypted
     //  config file instead
-const address_to_freeze = 'rUpy3eEg8rqjqfUoLeBnZkscbKbFsKXC3v';
+const address_to_freeze = 'cUpy3eEg8rqjqfUoLeBnZkscbKbFsKXC3v';
 const currency_to_freeze = 'USD';
 
 api.connect().then(() => {

@@ -1,7 +1,7 @@
 const {CasinocoinAPI} = require('casinocoin-libjs');
 
 const api = new CasinocoinAPI({
-  server: 'wss://ws01.casinocoin.org', // Public rippled server
+  server: 'wss://ws01.casinocoin.org', // Public casinocoind server
   port: 4443
 });
 api.on('error', (errorCode, errorMessage) => {

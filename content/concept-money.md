@@ -6,11 +6,11 @@ The CSC Ledger is an advanced blockchain-like system that was designed to let pe
 
 **CSC** is the native cryptocurrency of the CSC Ledger. All [accounts](concept-accounts.html) in the CSC Ledger can send CSC among one another and must hold a minimum amount of CSC as a [reserve](concept-reserves.html). CSC can be sent directly from any CSC Ledger address to any other, without needing a gateway or liquidity provider. This helps make CSC a convenient bridge currency.
 
-Some advanced features of the CSC Ledger, such as [Escrow](concept-escrow.html) and [Payment Channels](tutorial-paychan.html), only work with CSC. Order book [autobridging](https://ripple.com/dev-blog/introducing-offer-autobridging/) uses CSC to deepen liquidity in the decentralized exchange by merging order books of two issued currencies with CSC order books to create synthetic combined order books. (For example, autobridging matches USD:CSC and CSC:EUR orders to augment USD:EUR order books.)
+Some advanced features of the CSC Ledger, such as [Escrow](concept-escrow.html) and [Payment Channels](tutorial-paychan.html), only work with CSC. Order book [autobridging]() uses CSC to deepen liquidity in the decentralized exchange by merging order books of two issued currencies with CSC order books to create synthetic combined order books. (For example, autobridging matches USD:CSC and CSC:EUR orders to augment USD:EUR order books.)
 
 CSC also serves as a protective measure against spamming the network. All CSC Ledger addresses need a small amount of CSC to pay the costs of maintaining the CSC Ledger. The [transaction cost](concept-transaction-cost.html) and [reserve](concept-reserves.html) are neutral fees denominated in CSC and not paid to any party. In the ledger's data format, CSC is stored in [AccountRoot objects](reference-ledger-format.html#accountroot).
 
-For more information on CSC's use cases, benefits, and news, see the [CSC Portal](https://ripple.com/xrp-portal/).
+For more information on CSC's use cases, benefits, and news, see the [CSC Portal]().
 
 ### CSC Properties
 

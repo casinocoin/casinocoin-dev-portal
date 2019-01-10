@@ -31,11 +31,11 @@ Some addresses have special meaning, or historical uses, in the CSC Ledger. In m
 
 | Address                     | Name | Meaning | Black Hole? |
 |-----------------------------|------|---------|-------------|
-| rrrrrrrrrrrrrrrrrrrrrhoLvTp | ACCOUNT\_ZERO | An address that is the base58 encoding of the value `0`. In peer-to-peer communications, `casinocoind` uses this address as the issuer for CSC. | Yes |
-| rrrrrrrrrrrrrrrrrrrrBZbvji  | ACCOUNT\_ONE | An address that is the base58 encoding of the value `1`. In the ledger, [CasinocoinState entries](reference-ledger-format.html#casinocoinstate) use this address as a placeholder for the issuer of a trust line balance. | Yes |
+| cccccccccccccccccccchoLvTp | ACCOUNT\_ZERO | An address that is the base58 encoding of the value `0`. In peer-to-peer communications, `casinocoind` uses this address as the issuer for CSC. | Yes |
+| ccccccccccccccccccccBZbvji  | ACCOUNT\_ONE | An address that is the base58 encoding of the value `1`. In the ledger, [CasinocoinState entries](reference-ledger-format.html#casinocoinstate) use this address as a placeholder for the issuer of a trust line balance. | Yes |
 | cDarPNJEpCnpBZSfmcquydockkePkjPGA2 | The genesis account | When `casinocoind` starts a new genesis ledger from scratch (for example, in stand-alone mode), this account holds all the CSC. This address is generated from the seed value "masterpassphrase" which is [hard-coded](https://github.com/casinocoin/casinocoind/blob/4.0.1/src/casinocoin/app/ledger/Ledger.cpp#L184). | No |
-| rrrrrrrrrrrrrrrrrNAMEtxvNvQ | CasinoCoin Name reservation black-hole | In the past, CasinoCoin asked users to send CSC to this account to reserve CasinoCoin Names.| Yes |
-| rrrrrrrrrrrrrrrrrrrn5RM1rHd | NaN Address | Previous versions of [casinocoin-libjs](https://github.com/casinocoin/casinocoin-libjs) generated this address when base58 encoding the value [NaN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN). | Yes |
+| ccccccccccccccccccccNAMEtxvNvQ | CasinoCoin Name reservation black-hole | In the past, CasinoCoin asked users to send CSC to this account to reserve CasinoCoin Names.| Yes |
+| ccccccccccccccccccccn5RM1rHd | NaN Address | Previous versions of [casinocoin-libjs](https://github.com/casinocoin/casinocoin-libjs) generated this address when base58 encoding the value [NaN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN). | Yes |
 
 
 ## Permanence of Accounts

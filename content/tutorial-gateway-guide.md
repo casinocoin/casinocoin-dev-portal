@@ -34,7 +34,7 @@ A "trust line" is link between two addresses in the CSC Ledger. A trust line rep
 
 ### CSC
 
-**CSC** is the native cryptocurrency of the CSC Ledger. Like issuances, CSC can be freely sent and exchanged among CSC Ledger addresses. Unlike issuances, CSC is not tied to an accounting relationship. CSC can be sent directly from any CSC Ledger address to any other, without going through a gateway or liquidity provider. This helps make CSC a convenient bridge currency. For more information on CSC, see the [CSC Portal](https://ripple.com/xrp-portal/).
+**CSC** is the native cryptocurrency of the CSC Ledger. Like issuances, CSC can be freely sent and exchanged among CSC Ledger addresses. Unlike issuances, CSC is not tied to an accounting relationship. CSC can be sent directly from any CSC Ledger address to any other, without going through a gateway or liquidity provider. This helps make CSC a convenient bridge currency. For more information on CSC, see the [CSC Portal]().
 
 CSC also serves other purposes in the CSC Ledger, in particular as a protective measure against spamming the network. All CSC Ledger addresses need a small amount of CSC to pay the costs of maintaining the CSC Ledger. The [transaction cost](concept-transaction-cost.html) and [reserve](concept-reserves.html) are neutral fees denoted in CSC and not paid to any party.
 
@@ -356,18 +356,18 @@ Historically, CasinoCoin (the company) issued gateway bulletins to introduce new
 
 - May 13, 2015 - [GB-2015-06 Gateway Bulletin: Corrections to Autobridging](gb-2015-06.html)
 - April 17, 2015 - [GB-2015-05 Historical Ledger Query Migration](gb-2015-05.html)
-- March 13, 2015 - [GB-2015-04 Action Required: Default CasinoCoin Flag (PDF)](https://ripple.com/files/GB-2015-04.pdf)
-- March 3, 2015 - [GB-2015-03 Gateway Advisory: FinCEN Ruling on MoneyGram Compliance Program (PDF)](https://ripple.com/files/GB-2015-03.pdf)
-- March 2, 2015 (Updated) - [GB-2015-02 New Standards: How to be Featured on CasinoCoin Trade and CasinoCoin Charts (PDF)](https://ripple.com/files/GB-2015-02.pdf)
-- January 5, 2015 - [GB-2015-01 Gateway Advisory: Reliable Transaction Submission (PDF)](https://ripple.com/files/GB-2015-01.pdf)
-- December 18, 2014 - [GB-2014-08 Gateway Advisory: Recent FinCEN Rulings (PDF)](https://ripple.com/files/GB-2014-08.pdf)
-- November 4, 2014 -[GB-2014-07 Gateway Advisory: FATF Standards (PDF)](https://ripple.com/files/GB-2014-07.pdf)
-- October 17, 2014 -[GB-2014-06 Gateway Advisory: Partial Payment Flag (PDF)](https://ripple.com/files/GB-2014-06.pdf)
-- September 24, 2014 - [GB-2014-05 Gateway Advisory: EBA Opinion On Virtual Currency (PDF)](https://ripple.com/files/GB-2014-05.pdf)
-- September 11, 2014 - [GB-2014-04 Gateway Advisory: CFPB Opinion on Virtual Currency (PDF)](https://ripple.com/files/GB-2014-04.pdf)
-- August 19, 2014 - [GB-2014-03 Updated Feature: Trust Lines UI (PDF)](https://ripple.com/files/GB-2014-03.pdf)
-- August 1, 2014 - [GB-2014-02 New Feature: Balance Freeze (PDF)](https://ripple.com/files/GB-2014-02.pdf)
-- April 23, 2014, Updated August 14, 2014 -[GB-2014-01 New Feature: CasinoCoin Names (PDF)](https://ripple.com/files/GB-2014-01.pdf)
+- March 13, 2015 - [GB-2015-04 Action Required: Default CasinoCoin Flag (PDF)]()
+- March 3, 2015 - [GB-2015-03 Gateway Advisory: FinCEN Ruling on MoneyGram Compliance Program (PDF)]()
+- March 2, 2015 (Updated) - [GB-2015-02 New Standards: How to be Featured on CasinoCoin Trade and CasinoCoin Charts (PDF)]()
+- January 5, 2015 - [GB-2015-01 Gateway Advisory: Reliable Transaction Submission (PDF)]()
+- December 18, 2014 - [GB-2014-08 Gateway Advisory: Recent FinCEN Rulings (PDF)]()
+- November 4, 2014 -[GB-2014-07 Gateway Advisory: FATF Standards (PDF)]()
+- October 17, 2014 -[GB-2014-06 Gateway Advisory: Partial Payment Flag (PDF)]()
+- September 24, 2014 - [GB-2014-05 Gateway Advisory: EBA Opinion On Virtual Currency (PDF)]()
+- September 11, 2014 - [GB-2014-04 Gateway Advisory: CFPB Opinion on Virtual Currency (PDF)]()
+- August 19, 2014 - [GB-2014-03 Updated Feature: Trust Lines UI (PDF)]()
+- August 1, 2014 - [GB-2014-02 New Feature: Balance Freeze (PDF)]()
+- April 23, 2014, Updated August 14, 2014 -[GB-2014-01 New Feature: CasinoCoin Names (PDF)]()
 
 
 # Technical Details
@@ -659,7 +659,7 @@ To robustly check for incoming payments, gateways should do the following:
 
 * Keep a record of the most-recently-processed transaction and ledger. That way, if you temporarily lose connectivity, you know how far to go back.
 * Check the result code of every incoming payment. Some payments go into the ledger to charge an anti-spam fee, even though they failed. Only transactions with the result code `tesSUCCESS` can change non-CSC balances. Only transactions from a validated ledger are final.
-* [Look out for Partial Payments](https://ripple.com/files/GB-2014-06.pdf "Partial Payment Flag Gateway Bulletin"). Payments with the partial-payment flag enabled can be considered "successful" if any non-zero amount is delivered, even miniscule amounts.
+* [Look out for Partial Payments]( "Partial Payment Flag Gateway Bulletin"). Payments with the partial-payment flag enabled can be considered "successful" if any non-zero amount is delivered, even miniscule amounts.
     * In `casinocoind`, check the transaction for a `meta.delivered_amount` field. If present, that field indicates how much money *actually* got delivered to the `Destination` address.
     * In CasinocoinAPI, you can search the `outcome.BalanceChanges` field to see how much the destination address received. In some cases, this can be divided into multiple parts on different trust lines.
 * Some transactions change your balances without being payments directly to or from one of your addresses. For example, if ACME sets a nonzero [TransferRate](#transferrate), then ACME's issuing address's outstanding obligations decrease each time Bob and Charlie exchange ACME issuances. See [TransferRate](#transferrate) for more information.
@@ -819,7 +819,7 @@ In particular, note the following features of the [Payment Transaction](referenc
 
 When one of your addresses receives a payment whose purpose is unclear, we recommend that you try to return the money to its sender. While this is more work than pocketing the money, it demonstrates good faith towards customers. You can have an operator bounce payments manually, or create a system to do so automatically.
 
-The first requirement to bouncing payments is [robustly monitoring for incoming payments](#robustly-monitoring-for-payments). You do not want to accidentally refund a customer for more than they sent you! (This is particularly important if your bounce process is automated.) The [Partial Payment Flag Gateway Bulletin (PDF)](https://ripple.com/files/GB-2014-06.pdf) explains how to avoid a common problem.
+The first requirement to bouncing payments is [robustly monitoring for incoming payments](#robustly-monitoring-for-payments). You do not want to accidentally refund a customer for more than they sent you! (This is particularly important if your bounce process is automated.) The [Partial Payment Flag Gateway Bulletin (PDF)]() explains how to avoid a common problem.
 
 Second, you should send bounced payments as Partial Payments. Since third parties can manipulate the cost of pathways between addresses, Partial Payments allow you to divest yourself of the full amount without being concerned about exchange rates within the CSC Ledger. You should publicize your bounced payments policy as part of your terms of use. Send the bounced payment from either an operational address or a standby address.
 
