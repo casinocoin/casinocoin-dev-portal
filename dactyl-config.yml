@@ -169,12 +169,12 @@ pages:
     #         - local
     #         - casinocoin.org
 
-    -   md: reference-currency.md
-        category: References
-        html: reference-currency.html
-        targets:
-            - local
-            - casinocoin.org
+    #-   md: reference-currency.md
+    #    category: References
+    #    html: reference-currency.html
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
     -   md: reference-amendments.md
         category: References
@@ -192,21 +192,21 @@ pages:
             - local
             - casinocoin.org
 
-    -   category: Tutorials
-        html: tutorial-paychan.html
-        md: tutorial-paychan.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   category: Tutorials
+    #    html: tutorial-paychan.html
+    #    md: tutorial-paychan.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
         # This is more like a "best practices" doc than Tutorials...
-    -   name: Issuing and Operational Addresses
-        category: Tutorials
-        html: concept-issuing-and-operational-addresses.html
-        md: concept-issuing-and-operational-addresses.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Issuing and Operational Addresses
+    #    category: Tutorials
+    #    html: concept-issuing-and-operational-addresses.html
+    #    md: concept-issuing-and-operational-addresses.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
     -   name: Reliable Transaction Submission
         category: Tutorials
@@ -244,13 +244,13 @@ pages:
             # - casinocoind-setup
 
         # The Gateway Guide is also a poor fit for the "tutorials" category
-    -   name: Gateway Guide
-        category: Tutorials
-        html: tutorial-gateway-guide.html
-        md: tutorial-gateway-guide.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Gateway Guide
+    #    category: Tutorials
+    #    html: tutorial-gateway-guide.html
+    #    md: tutorial-gateway-guide.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
 # Listing CSC as an Exchange
     -   category: Tutorials
@@ -330,27 +330,27 @@ pages:
             - local
             - casinocoin.org
 
-    -   name: Freeze
-        category: Features
-        html: concept-freeze.html
-        md: concept-freeze.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Freeze
+    #    category: Features
+    #    html: concept-freeze.html
+    #    md: concept-freeze.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
-    -   md: concept-money.md
-        category: Features
-        html: concept-money.html
-        targets:
-            - local
-            - casinocoin.org
+    #-   md: concept-money.md
+    #    category: Features
+    #    html: concept-money.html
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
-    -   md: concept-demurrage.md
-        category: Features
-        html: concept-demurrage.html
-        targets:
-            - local
-            - casinocoin.org
+    #-   md: concept-demurrage.md
+    #    category: Features
+    #    html: concept-demurrage.html
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
     -   md: concept-partial-payments.md
         category: Features
@@ -359,13 +359,13 @@ pages:
             - local
             - casinocoin.org
 
-    -   name: Paths
-        category: Features
-        html: concept-paths.html
-        md: concept-paths.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Paths
+    #    category: Features
+    #    html: concept-paths.html
+    #    md: concept-paths.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
     -   name: Reserves
         category: Features
@@ -391,21 +391,21 @@ pages:
             - local
             - casinocoin.org
 
-    -   name: Transfer Fees
-        category: Features
-        html: concept-transfer-fees.html
-        md: concept-transfer-fees.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Transfer Fees
+    #    category: Features
+    #    html: concept-transfer-fees.html
+    #    md: concept-transfer-fees.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
-    -   name: Understanding the NoCasinocoin flag
-        category: Features
-        html: concept-nocasinocoin.html
-        md: concept-nocasinocoin.md
-        targets:
-            - local
-            - casinocoin.org
+    #-   name: Understanding the NoCasinocoin flag
+    #    category: Features
+    #    html: concept-nocasinocoin.html
+    #    md: concept-nocasinocoin.md
+    #    targets:
+    #        - local
+    #        - casinocoin.org
 
     # -   name: "GB-2015-06: Corrections to Autobridging"
     #     category: Gateway Bulletins
